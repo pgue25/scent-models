@@ -1,0 +1,36 @@
+=== 1. Data (REAL, product level) ===
+Fragrantica perfumes with 50+ ratings (Kaggle): 24,486; one row per perfume; features: 20 accord flags
+no outcome (clustering); no per-user data
+
+=== 2. Split ===
+random 70/30 split of perfumes (seed 0): 17,314 train / 7,172 test
+
+=== 3. Elbow: train, and test recomputed from the trained centers ===
+   train   test
+1  3.036  3.039
+2  2.664  2.670
+3  2.455  2.460
+4  2.287  2.294
+5  2.182  2.189
+6  2.100  2.109
+7  2.042  2.051
+8  1.988  1.995
+elbow: train k = 2, test k = 2 -> SAME
+  silhouette k=2: 0.123
+  silhouette k=3: 0.121
+  silhouette k=4: 0.123
+  silhouette k=5: 0.120
+  silhouette k=6: 0.116
+
+=== 4. Scent families (k = 2) ===
+  family 0: 7,956 perfumes; mostly woody, aromatic, citrus, fresh spicy; avg rating 4.00; women 22%, men 34%
+  family 1: 9,358 perfumes; mostly sweet, fruity, floral, powdery; avg rating 3.94; women 67%, men 4%
+training inertia 2.664 vs 3.036 with one group
+
+=== 5. Decision: put a new perfume into a family (shelf / quiz section) ===
+new input: accords citrus, aromatic, fresh spicy, woody, green -> family 0
+
+=== 6. Value ===
+test perfumes per family: family 0: 46%, family 1: 54%
+These families are candidates for quiz sections: one or two everyday smells per family.
+No sales data exists, so no $ value is given for this model.

@@ -1,0 +1,55 @@
+=== 1. Data (REAL, product level) ===
+source: Fragrantica perfumes via Kaggle archive (fra_perfumes.csv), scraped by the dataset author.
+one row per perfume with 50+ ratings: 24,486 perfumes, 1,001 brands
+outcome: rating = Fragrantica average rating (1-5)  <- OUTCOME
+features: 20 accord flags (woody, citrus, sweet, aromatic, powdery, fruity, floral, warm spicy, white floral, amber, fresh spicy, vanilla, musky, green, fresh, rose, earthy, leather, patchouli, aquatic), gender (women / men / unisex), log number of ratings
+no per-user data: this model cannot recommend for a specific person
+
+=== 2. Split ===
+random 70/30 split of perfumes (seed 0): 17,314 train / 7,172 test
+
+=== 3. Fit ===
+training R^2 0.074, adjusted R^2 0.073
+effect on average rating (stars) of having each accord / attribute:
+gender_men          0.060
+acc_amber           0.048
+acc_vanilla         0.048
+acc_earthy          0.030
+acc_warm spicy      0.024
+acc_leather         0.018
+acc_powdery         0.009
+acc_rose            0.008
+log_count           0.008
+acc_sweet           0.007
+acc_woody           0.003
+acc_fresh spicy    -0.005
+acc_green          -0.007
+acc_citrus         -0.016
+acc_aromatic       -0.017
+acc_white floral   -0.017
+acc_patchouli      -0.018
+acc_fresh          -0.020
+acc_floral         -0.020
+gender_women       -0.020
+acc_musky          -0.046
+acc_fruity         -0.056
+acc_aquatic        -0.072
+
+=== 4. Test perfumes: baseline vs model ===
+                          MAE (stars)    R^2
+baseline: average rating        0.207 -0.000
+regression                      0.197  0.081
+MAE difference, model minus baseline: -0.0102 (95% CI -0.0118 to -0.0087)
+for scale: the spread (sd) of perfume ratings is only 0.26 stars
+
+=== 5. Decision: stock a new perfume if its predicted rating is 4.0 or more ===
+new input: unisex perfume with accords ['citrus', 'woody', 'aromatic', 'fresh spicy', 'green'], 500 ratings -> (3.95, 'pass')
+
+=== 6. Value: average real rating of the perfumes each rule would stock (test perfumes) ===
+no model (stock everything): 7,172 perfumes, average rating 3.969
+model (stock if predicted 4.0+): 2,562 perfumes, average rating 4.051
+No sales or revenue data exists for these perfumes, so no $ figure is given.
+
+=== 7. Sanity check: shuffled outcome ===
+                        MAE (stars)    R^2
+shuffled-outcome model        0.207  0.002

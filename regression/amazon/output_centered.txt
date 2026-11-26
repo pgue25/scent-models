@@ -1,0 +1,61 @@
+=== 1. Data (REAL, generosity controlled) ===
+Amazon fragrance ratings about the smell, matched to Fragrantica: 2,789 ratings, 264 people
+normal = person's training average, pulled toward the overall average by 3 pseudo-ratings
+outcome: target = stars - normal  <- OUTCOME  (positive = they liked it more than usual)
+features (64): person_n, fra_rating, fra_log_count, acc_*, ctaste_* (liking of accord vs own normal), cmatch_*
+target: mean +0.00, sd 1.10 (train)
+
+=== 2. Split ===
+30% of each person's ratings held out (seed 0): 1,969 train / 820 test
+
+=== 3. Fit (ridge, alpha by CV grouped by person) ===
+alpha 1e+03; training R^2 0.020, adjusted R^2 -0.013
+biggest effects (stars above normal per 1 sd of the feature):
+fra_log_count        0.078
+cmatch_total         0.034
+ctaste_musky        -0.018
+ctaste_warm spicy   -0.014
+cmatch_powdery       0.014
+acc_citrus           0.013
+acc_white floral     0.012
+cmatch_woody         0.011
+acc_powdery          0.010
+cmatch_fruity       -0.010
+
+=== 4. Test ratings ===
+(a) predicting stars above normal:
+                                           MAE    R^2
+baseline: 0 (rate everything at normal)  0.986 -0.011
+model without scent                      0.986  0.010
+model with scent                         0.986  0.001
+(b) ranking each person's held-out perfumes (what the product actually does):
+                                    top_is_best  top_liked  spearman
+baseline: perfume's average rating        0.597      0.731     0.198
+model without scent                       0.666      0.792     0.230
+model with scent                          0.605      0.744     0.166
+people scored: 154 (2+ held-out perfumes with different stars)
+  top_is_best: model with scent minus baseline +0.008 (95% CI -0.100 to +0.106)
+  top_liked: model with scent minus baseline +0.013 (95% CI -0.068 to +0.094)
+  spearman: model with scent minus baseline -0.032 (95% CI -0.191 to +0.122)
+  top_is_best: scent minus no-scent -0.062 (95% CI -0.127 to +0.000)
+
+=== 5. Decision: show the perfumes predicted furthest above the person's normal ===
+new input: swiss-arabian shaghaf-oud (sweet;oud;vanilla;rose;warm spicy) for a person with normal 4.44
+-> predicted +0.04 stars vs their normal: show (actual +0.56)
+
+=== 6. Value per month (top pick liked), baseline vs model ===
+  ASSUMPTIONS ARE MADE UP:
+    quiz users per month = 5000
+    products shown per user = 3
+    P(purchase | shown product is liked) = 0.05
+    P(purchase | not liked) = 0.005
+    commission per purchase ($) = 8.0
+                                                   products shown  liked products shown  purchases  commission ($)
+Baseline (avg rating)                                     15000.0               10965.0      568.4          4547.4
+Regression (centered)                                     15000.0               11160.0      577.2          4617.6
+Regression (centered) minus Baseline (avg rating)             0.0                 195.0        8.8            70.2
+
+=== 7. Sanity check: shuffled outcome ===
+          top_is_best  top_liked  spearman
+baseline        0.597      0.731     0.198
+shuffled        0.507      0.685     0.014

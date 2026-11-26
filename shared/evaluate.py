@@ -69,3 +69,41 @@ def bootstrap_diff(a, b, n_boot=2000, seed=0):
     idx = np.random.default_rng(seed).integers(0, len(d), (n_boot, len(d)))
     lo, hi = np.percentile(d[idx].mean(axis=1), [2.5, 97.5])
     return d.mean(), lo, hi
+
+
+def within_person_ranking(test, score_col, n_shuffles=50, seed=0):
+    """Rank each person's held-out perfumes by `score_col` and compare with their real stars.
+    Only people with 2+ held-out perfumes that are not all the same stars count.
+
+    Returns per-person columns:
+      top_is_best   the perfume ranked first is one of the person's highest-rated held-out ones
+      top_liked     the perfume ranked first got 4-5 stars
+      spearman      rank correlation between score and stars within the person
+    Ties in the score are broken at random and averaged over `n_shuffles` draws, so a model
+    that gives everyone the same score is scored like a coin, not like a lucky order."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for uid, g in test.groupby("user_id"):
+        if len(g) < 2 or g.rating.nunique() < 2:
+            continue
+        stars, sc = g.rating.to_numpy(float), g[score_col].to_numpy(float)
+        best, liked, rho = [], [], []
+        for _ in range(n_shuffles):
+            order = np.lexsort((rng.random(len(g)), -sc))
+            top = order[0]
+            best.append(stars[top] == stars.max()); liked.append(stars[top] >= 4)
+            ranks = np.empty(len(g)); ranks[order] = np.arange(len(g))
+            rho.append(pd.Series(-ranks).corr(pd.Series(stars), method="spearman"))
+        rows.append({"user_id": uid, "top_is_best": np.mean(best), "top_liked": np.mean(liked),
+                     "spearman": np.nanmean(rho)})
+    return pd.DataFrame(rows).set_index("user_id")
+
+
+def ranking_table(test, scores):
+    """scores: {name: column}. Mean of within_person_ranking per model, plus bootstrap of the
+    difference between the last model and the first (the baseline)."""
+    per = {name: within_person_ranking(test, col) for name, col in scores.items()}
+    t = pd.DataFrame({n: p.mean() for n, p in per.items()}).T.round(3)
+    names = list(scores)
+    ci = {m: bootstrap_diff(per[names[-1]][m], per[names[0]][m]) for m in ("top_is_best", "top_liked", "spearman")}
+    return t, ci, len(per[names[0]])

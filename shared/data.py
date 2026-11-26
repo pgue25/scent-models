@@ -89,3 +89,56 @@ def load_kaggle(min_ratings=50):
     test = np.random.default_rng(SEED).random(len(df)) < 0.3
     df["split"] = np.where(test, "test", "train")
     return df, top
+
+
+# ---------------------------------------------------------------- Amazon, generosity controlled
+SHRINK = 3  # pseudo-ratings at the overall average added to each person's "normal"
+
+
+def person_features_centered(df, top, shrink=SHRINK):
+    """Like person_features, but every number is relative to the person's own "normal".
+
+      normal         the person's average stars on their TRAINING ratings, pulled toward the
+                     overall training average by `shrink` pseudo-ratings (leave-one-out for
+                     training rows, so a row never helps set its own normal)
+      target         stars - normal  (what the regression predicts)
+      above_normal   1 if stars > normal (what the tree predicts)
+      ctaste_<acc>   average of (stars - normal) over the person's OTHER training perfumes with
+                     that accord; 0 if none
+      cmatch_<acc>   ctaste_<acc> x the perfume has that accord; cmatch_total their sum
+    Test ratings are never used to build any feature.
+    """
+    acc = [f"acc_{a}" for a in top]
+    tr = df[df.split == "train"]
+    mu = tr.rating.mean()
+    S = tr.groupby("user_id").rating.agg(["sum", "count"])
+    A = tr[acc].to_numpy(float); r = tr.rating.to_numpy(float); users = tr.user_id.to_numpy()
+    sumA = pd.DataFrame(A * r[:, None], index=users, columns=acc).groupby(level=0).sum()
+    cntA = pd.DataFrame(A, index=users, columns=acc).groupby(level=0).sum()
+
+    out = df.copy()
+    is_tr = (out.split == "train").to_numpy()
+    rating = out.rating.to_numpy(float)
+    s = S.loc[out.user_id, "sum"].to_numpy() - np.where(is_tr, rating, 0)
+    c = S.loc[out.user_id, "count"].to_numpy() - is_tr
+    normal = (s + shrink * mu) / (c + shrink)
+    own = out[acc].to_numpy(float) * is_tr[:, None]
+    sa = sumA.loc[out.user_id].to_numpy() - own * rating[:, None]
+    ca = cntA.loc[out.user_id].to_numpy() - own
+    taste = np.divide(sa - ca * normal[:, None], ca, out=np.zeros_like(sa), where=ca > 0)
+    out["normal"], out["person_n"] = normal, c
+    out["target"] = rating - normal
+    out["above_normal"] = (out.target > 0).astype(int)
+    for j, a in enumerate(top):
+        out[f"ctaste_{a}"] = taste[:, j]
+        out[f"cmatch_{a}"] = taste[:, j] * out[f"acc_{a}"]
+    out["cmatch_total"] = out[[f"cmatch_{a}" for a in top]].sum(axis=1)
+    return out
+
+
+def centered_feature_names(top, scent=True):
+    """Generosity is already removed from the target, so `normal` is not an input."""
+    base = ["person_n", "fra_rating", "fra_log_count"]
+    if not scent:
+        return base
+    return base + [f"acc_{a}" for a in top] + [f"ctaste_{a}" for a in top] + [f"cmatch_{a}" for a in top] + ["cmatch_total"]

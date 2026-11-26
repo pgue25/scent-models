@@ -21,6 +21,10 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python tree/kaggle/run.py
 .venv/bin/python clustering/amazon/run.py
 .venv/bin/python clustering/kaggle/run.py
+# Amazon with generosity controlled (target = stars minus the person's normal)
+.venv/bin/python regression/amazon/run_centered.py
+.venv/bin/python tree/amazon/run_centered.py
+.venv/bin/python clustering/amazon/run_centered.py
 ```
 
 Each folder keeps the script's printed output (`output.txt`) and charts. The data files are

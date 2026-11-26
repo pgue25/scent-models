@@ -1,0 +1,99 @@
+=== 1. Data (REAL, generosity controlled) ===
+2,789 ratings, 264 people; normal = training average shrunk by 3 pseudo-ratings
+outcome: above_normal = stars > the person's normal  <- OUTCOME
+share above normal: train 0.642, test 0.676
+
+=== 2. Split ===
+30% of each person's ratings held out (seed 0): 1,969 train / 820 test
+
+=== 3. Fit (depth, leaf size by CV grouped by person) ===
+balanced-class tree: depth 4, min leaf 100
+|--- ctaste_floral <= 0.00
+|   |--- ctaste_white floral <= 0.04
+|   |   |--- ctaste_rose <= 0.21
+|   |   |   |--- ctaste_powdery <= 0.10
+|   |   |   |   |--- class: 0
+|   |   |   |--- ctaste_powdery >  0.10
+|   |   |   |   |--- class: 0
+|   |   |--- ctaste_rose >  0.21
+|   |   |   |--- class: 1
+|   |--- ctaste_white floral >  0.04
+|   |   |--- ctaste_woody <= 0.43
+|   |   |   |--- ctaste_woody <= 0.08
+|   |   |   |   |--- class: 1
+|   |   |   |--- ctaste_woody >  0.08
+|   |   |   |   |--- class: 0
+|   |   |--- ctaste_woody >  0.43
+|   |   |   |--- class: 1
+|--- ctaste_floral >  0.00
+|   |--- ctaste_woody <= 0.07
+|   |   |--- fra_log_count <= 6.89
+|   |   |   |--- class: 0
+|   |   |--- fra_log_count >  6.89
+|   |   |   |--- class: 1
+|   |--- ctaste_woody >  0.07
+|   |   |--- ctaste_lavender <= 0.04
+|   |   |   |--- ctaste_sweet <= 0.33
+|   |   |   |   |--- class: 1
+|   |   |   |--- ctaste_sweet >  0.33
+|   |   |   |   |--- class: 1
+|   |   |--- ctaste_lavender >  0.04
+|   |   |   |--- class: 1
+
+chosen: depth 2, min leaf 50
+|--- cmatch_total <= 0.26
+|   |--- ctaste_musky <= 0.02
+|   |   |--- class: 1
+|   |--- ctaste_musky >  0.02
+|   |   |--- class: 1
+|--- cmatch_total >  0.26
+|   |--- ctaste_woody <= 0.05
+|   |   |--- class: 1
+|   |--- ctaste_woody >  0.05
+|   |   |--- class: 1
+
+feature importance:
+cmatch_total    0.430
+ctaste_woody    0.286
+ctaste_musky    0.284
+
+=== 4. Test ratings ===
+                                     accuracy  precision  recall  balanced acc.
+baseline: most common class (above)     0.676      0.676   1.000          0.500
+tree without scent                      0.676      0.676   1.000          0.500
+tree with scent                         0.676      0.676   1.000          0.500
+tree with scent, balanced classes       0.594      0.734   0.626          0.576
+tree with scent, confusion matrix:
+                  pred: at/below  pred: above
+actual: at/below               0          266
+actual: above                  0          554
+accuracy: training 0.642 vs test 0.676
+ranking each person's held-out perfumes by P(above normal):
+                                    top_is_best  top_liked  spearman
+baseline: perfume's average rating        0.597      0.731     0.198
+tree without scent                        0.550      0.699     0.037
+tree with scent, balanced                 0.535      0.715     0.033
+tree with scent                           0.492      0.688    -0.029
+people scored: 154
+  top_is_best: tree with scent minus baseline -0.105 (95% CI -0.189 to -0.024)
+  top_liked: tree with scent minus baseline -0.043 (95% CI -0.108 to +0.018)
+  spearman: tree with scent minus baseline -0.227 (95% CI -0.359 to -0.100)
+
+=== 5. Decision: show a perfume if the tree says 'above normal' ===
+new input: swiss-arabian shaghaf-oud (sweet;oud;vanilla;rose;warm spicy) -> P(above normal) 0.59: show (actual above)
+
+=== 6. Value per month (top pick liked) ===
+  ASSUMPTIONS ARE MADE UP:
+    quiz users per month = 5000
+    products shown per user = 3
+    P(purchase | shown product is liked) = 0.05
+    P(purchase | not liked) = 0.005
+    commission per purchase ($) = 8.0
+                                             products shown  liked products shown  purchases  commission ($)
+Baseline (avg rating)                               15000.0               10965.0      568.4          4547.4
+Tree (centered)                                     15000.0               10320.0      539.4          4315.2
+Tree (centered) minus Baseline (avg rating)             0.0                -645.0      -29.0          -232.2
+
+=== 7. Sanity check: shuffled outcome ===
+                       accuracy  precision  recall  balanced acc.
+shuffled-outcome tree     0.663      0.675   0.969          0.498

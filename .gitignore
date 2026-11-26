@@ -221,3 +221,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# local raw downloads (Amazon Reviews 2023, Kaggle archive)
+data/raw/

@@ -1,0 +1,48 @@
+=== 1. Data (REAL) ===
+source: Amazon Reviews 2023 fragrance reviews about the smell, matched to Fragrantica accords.
+one row per person: 264 people, each described by 20 accord taste scores (no outcome: clustering)
+taste score = average of (stars - own average) over the person's perfumes with that accord
+
+=== 2. Split ===
+30% of each person's ratings held out: train profiles from 1,969 ratings, test profiles from 820
+
+=== 3. Elbow: train, and test recomputed from the trained centers ===
+   train   test
+1  6.912  8.328
+2  6.447  8.100
+3  6.163  7.925
+4  5.942  7.646
+5  5.681  7.535
+6  5.507  7.507
+7  5.385  7.313
+8  5.203  7.342
+elbow: train k = 2, test k = 7 -> DIFFERENT
+  silhouette k=2: 0.196  (near 0 = groups overlap; above 0.25 = real structure)
+  silhouette k=3: 0.212  (near 0 = groups overlap; above 0.25 = real structure)
+  silhouette k=4: 0.253  (near 0 = groups overlap; above 0.25 = real structure)
+  silhouette k=5: 0.175  (near 0 = groups overlap; above 0.25 = real structure)
+
+=== 4. Personas (k = 2) ===
+  persona 0: 204 people; rates higher: fresh spicy, green, aromatic; rates lower: sweet, musky, vanilla
+  persona 1: 60 people; rates higher: sweet, powdery, musky; rates lower: fresh spicy, green, lavender
+training inertia 6.447 vs 6.912 with one group
+
+=== 5. Decision: assign a person to a persona, show perfumes with that persona's favourite accords ===
+new input: a person whose strongest likes are lavender, amber, fresh -> persona 0
+         brand        perfume                                        accords
+giorgio-armani acqua-di-gioia aromatic;citrus;green;white floral;fresh spicy
+         prada     luna-rossa     aromatic;lavender;green;fresh spicy;citrus
+     bois-1920      oltremare        citrus;aromatic;green;fresh spicy;woody
+
+=== 6. Value per month, baseline (one group = most popular) vs personas ===
+top pick liked among each person's held-out perfumes: one group 0.807, personas 0.777 (264 people)
+  ASSUMPTIONS ARE MADE UP:
+    quiz users per month = 5000
+    products shown per user = 3
+    P(purchase | shown product is liked) = 0.05
+    P(purchase | not liked) = 0.005
+    commission per purchase ($) = 8.0
+                                     products shown  liked products shown  purchases  commission ($)
+Baseline (one group)                        15000.0               12102.3      619.6          4956.8
+Personas                                    15000.0               11647.7      599.1          4793.2
+Personas minus Baseline (one group)             0.0                -454.6      -20.5          -163.6

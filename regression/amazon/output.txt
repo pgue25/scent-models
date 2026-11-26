@@ -1,0 +1,61 @@
+=== 1. Data (REAL) ===
+source: Amazon Reviews 2023 (McAuley Lab), fragrance reviews 2003-2023, filtered to reviews about
+the smell and matched to Fragrantica accords (Kaggle). See data/README.md.
+one row per (person, perfume): 2,789 ratings, 264 people, 1,725 perfumes
+outcome: rating (1-5 stars)  <- OUTCOME
+features (65): person_avg, person_n (from the person's other training ratings), fra_rating,
+  fra_log_count (Fragrantica), acc_* (perfume has accord), taste_* (person's liking of accord vs own avg),
+  match_* = taste x accord, match_total. Accords: woody, sweet, citrus, fruity, aromatic, powdery, white floral, floral, warm spicy, fresh spicy, vanilla, amber, fresh, musky, green, rose, lavender, patchouli, aquatic, caramel
+
+=== 2. Split ===
+30% of each person's ratings held out (seed 0): 1,969 train / 820 test
+
+=== 3. Fit (ridge, alpha by 5-fold CV grouped by person) ===
+alpha 100; training R^2 0.167, adjusted R^2 0.139
+biggest effects (stars per 1 standard deviation of the feature):
+person_avg            0.377
+fra_log_count         0.084
+match_powdery         0.069
+taste_white floral    0.051
+acc_citrus            0.040
+acc_white floral      0.040
+match_fruity         -0.038
+taste_fresh           0.034
+taste_warm spicy     -0.034
+match_floral          0.029
+
+=== 4. Test ratings: baseline vs model ===
+                           MAE (stars)    R^2
+baseline: overall average        0.891 -0.009
+person's own average             0.777  0.070
+model without scent taste        0.794  0.145
+model (full)                     0.805  0.132
+MAE, full minus baseline, by person:           -0.094 (95% CI -0.130 to -0.057)
+MAE, full minus model without scent taste:     0.009 (95% CI -0.004 to 0.023)
+
+=== 5. Decision: show the 3 perfumes with the highest predicted rating ===
+new input: a test person with 67 known ratings (avg 3.51);
+  their 5-star perfumes: oud-mood; fantasme; her-golden-secret; angel-muse; valentina-poudre
+       brand           perfume                                   accords  predicted stars
+      chanel coco-mademoiselle citrus;woody;patchouli;sweet;white floral             4.02
+calvin-klein            ck-one   citrus;green;woody;powdery;white floral             4.01
+ viktor-rolf            bonbon  caramel;sweet;citrus;white floral;fruity             3.94
+
+=== 6. Value per month, baseline vs model ===
+Each test person's held-out perfumes are ranked; is the top one liked (4-5 stars)?
+top pick liked: baseline (most popular by Fragrantica rating) 0.807, model 0.807  (264 people with 2+ test ratings)
+  ASSUMPTIONS ARE MADE UP:
+    quiz users per month = 5000
+    products shown per user = 3
+    P(purchase | shown product is liked) = 0.05
+    P(purchase | not liked) = 0.005
+    commission per purchase ($) = 8.0
+                                     products shown  liked products shown  purchases  commission ($)
+Baseline (popular)                          15000.0               12102.3      619.6          4956.8
+Regression                                  15000.0               12102.3      619.6          4956.8
+Regression minus Baseline (popular)             0.0                   0.0        0.0             0.0
+
+=== 7. Sanity check: shuffle the outcome within training rows and refit ===
+                        MAE (stars)    R^2
+shuffled-outcome model        0.892 -0.014
+(should be no better than the baseline)
